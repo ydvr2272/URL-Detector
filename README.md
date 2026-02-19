@@ -12,5 +12,3 @@ Machine Learning based URL security checker.
 
 Dataset Download Link:
 https://drive.google.com/file/d/1g3LYBdFk7hrqDfsKU_C8WsetStbZgQ4U/view?usp=drivesdk
-
-(Note: Dataset is large, so hosted externally)
