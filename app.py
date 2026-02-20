@@ -1,87 +1,48 @@
 import streamlit as st
+import joblib
 import re
-import pandas as pd
 from urllib.parse import urlparse
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.calibration import CalibratedClassifierCV
+st.set_page_config(page_title="URL Detector", page_icon="🛡️")
 
+st.title("🛡️ Malicious URL Detector")
 
-# ---------------- LOAD & TRAIN MODEL ----------------
 @st.cache_resource
 def load_model():
-
-    data = pd.read_csv("malicious_urls.csv")
-
-    data["label"] = data["type"].map({
-        "benign": 0,
-        "phishing": 1,
-        "defacement": 1,
-        "malware": 1
-    })
-
-    data = data.dropna(subset=["label"])
-
-    X = data["url"]
-    y = data["label"]
-
-    vectorizer = TfidfVectorizer(
-        analyzer="char",
-        ngram_range=(3, 5),
-        max_features=20000
-    )
-
-    X_vec = vectorizer.fit_transform(X)
-
-    base_lr = LogisticRegression(
-        max_iter=500,
-        solver="liblinear",
-        class_weight="balanced"
-    )
-
-    model = CalibratedClassifierCV(base_lr, method='sigmoid')
-    model.fit(X_vec, y)
-
+    vectorizer = joblib.load("vectorizer.pkl")
+    model = joblib.load("model.pkl")
     return vectorizer, model
 
-
 vectorizer, model = load_model()
-
-
-# ---------------- RULE FUNCTIONS ----------------
-def has_ip(url):
-    return bool(re.search(r"\d+\.\d+\.\d+\.\d+", url))
-
-
-def too_many_special_chars(url):
-    return len(re.findall(r"[^\w]", url)) > 10
-
 
 GOV_TLDS = (".gov", ".gov.in", ".nic.in", ".edu", ".mil")
 
 TRUSTED_DOMAINS = (
     "google.com",
+    "youtube.com",
     "linkedin.com",
     "wikipedia.org",
-    "youtube.com",
     "amazon.in",
-    "hotstar.com"
+    "hotstar.com",
+    "paytm.com",
+    "phonepe.com",
+    "github.com"
 )
 
+def has_ip(url):
+    return bool(re.search(r"\d+\.\d+\.\d+\.\d+", url))
 
-# ---------------- UI ----------------
-st.title("🔍 URL Safety Checker")
-st.write("Check whether a URL is Safe, Suspicious, or Malicious")
+def too_many_special_chars(url):
+    return len(re.findall(r"[^\w]", url)) > 10
+
 
 url = st.text_input("Enter URL")
 
 if st.button("Check URL"):
 
     if not url:
-        st.error("Please enter a URL")
+        st.warning("Enter a URL")
     else:
-
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
 
@@ -115,10 +76,3 @@ if st.button("Check URL"):
                 st.warning("SUSPICIOUS ⚠️")
             else:
                 st.error("MALICIOUS 🚨")
-import joblib
-
-joblib.dump(lr_model, "model.pkl")
-joblib.dump(vectorizer, "vectorizer.pkl")
-
-print("\n✅ Model Saved Successfully!")
-
